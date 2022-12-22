@@ -1,11 +1,14 @@
 package com.udacity.jdnd.course3.critter.user;
 
 import com.udacity.jdnd.course3.critter.service.CustomerService;
+import com.udacity.jdnd.course3.critter.service.EmployeeService;
 import com.udacity.jdnd.course3.critter.service.PetService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -21,19 +24,19 @@ import java.util.stream.Collectors;
 @RequestMapping("/user")
 public class UserController {
     private final CustomerService customerService;
-    //private final EmployeeService employeeService;
+    private final EmployeeService employeeService;
     private PetService petService;
 
 
-    public UserController(CustomerService customerService, PetService petService) {
+    public UserController(CustomerService customerService, PetService petService,EmployeeService employeeService) {
         this.customerService = customerService;
         this.petService = petService;
-        //this.employeeService = employeeService;
+        this.employeeService = employeeService;
     }
 
     @PostMapping("/customer")
     public CustomerDTO saveCustomer(@RequestBody CustomerDTO customerDTO){
-
+        //System.out.println("Test print");
         //throw new UnsupportedOperationException();
         Customer customer = customerService.save(customerDTOToCustomerFunction.apply(customerDTO));
         return customerToCustomerDTOFunction.apply(customer);
@@ -52,22 +55,32 @@ public class UserController {
 
     @PostMapping("/employee")
     public EmployeeDTO saveEmployee(@RequestBody EmployeeDTO employeeDTO) {
-        throw new UnsupportedOperationException();
+        Employee employee = employeeService.save(employeeDTOToEmployeeFunction.apply(employeeDTO));
+        return employeeToEmployeeDTOFunction.apply(employee);
     }
 
     @PostMapping("/employee/{employeeId}")
-    public EmployeeDTO getEmployee(@PathVariable long employeeId) {
-        throw new UnsupportedOperationException();
+    public EmployeeDTO getEmployee(@PathVariable long employeeId) throws Exception {
+        return employeeToEmployeeDTOFunction.apply(employeeService.findById(employeeId));
+
     }
 
     @PutMapping("/employee/{employeeId}")
-    public void setAvailability(@RequestBody Set<DayOfWeek> daysAvailable, @PathVariable long employeeId) {
-        throw new UnsupportedOperationException();
+    public void setAvailability(@RequestBody Set<DayOfWeek> daysAvailable, @PathVariable long employeeId) throws Exception {
+        Employee employee = employeeService.findById(employeeId);
+        employee.setDaysAvailable(daysAvailable);
+        employeeService.save(employee);
     }
 
     @GetMapping("/employee/availability")
     public List<EmployeeDTO> findEmployeesForService(@RequestBody EmployeeRequestDTO employeeDTO) {
-        throw new UnsupportedOperationException();
+        HashSet<EmployeeSkill> requiredSkills = new HashSet<>(employeeDTO.getSkills()) ;
+        LocalDate requiredDate = employeeDTO.getDate();
+        return employeeService.findEmployeesForService( requiredDate,requiredSkills)
+                    .stream()
+                    .map(employeeToEmployeeDTOFunction)
+                    .collect(Collectors.toList());
+
     }
 
     Function<Customer, CustomerDTO> customerToCustomerDTOFunction = customer -> {
@@ -86,6 +99,17 @@ public class UserController {
             customer.setPets(customerDTO.getPetIds().stream().map(id -> petService.getById(id)).collect(Collectors.toList()));
         }
         return customer;
+    };
+    Function<Employee, EmployeeDTO> employeeToEmployeeDTOFunction = employee -> {
+        EmployeeDTO newEmployeeDTO = new EmployeeDTO();
+        BeanUtils.copyProperties(employee, newEmployeeDTO);
+        return newEmployeeDTO;
+    };
+
+    Function<EmployeeDTO, Employee> employeeDTOToEmployeeFunction = employeeDTO -> {
+        Employee employee = new Employee();
+        BeanUtils.copyProperties(employeeDTO, employee);
+        return employee;
     };
 
 }

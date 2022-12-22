@@ -26,7 +26,7 @@ public class Pet {
 
     private LocalDate birthDate;
 
-    private String note;
+    private String notes;
 
     @ManyToOne(cascade = CascadeType.PERSIST, fetch = FetchType.LAZY, optional = false)
     private Customer customer;
